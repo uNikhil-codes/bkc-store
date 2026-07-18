@@ -1,0 +1,105 @@
+export default {
+  name: 'product',
+  title: 'Products',
+  type: 'document',
+  groups: [
+    { name: 'basics', title: 'Basic Info', default: true },
+    { name: 'pricing', title: 'Pricing & COD' },
+    { name: 'media', title: 'Images & Text' },
+  ],
+  fields: [
+    // --- BASIC INFO TAB ---
+    {
+      name: 'isActive',
+      title: 'Product is Active (Visible on site)',
+      type: 'boolean',
+      initialValue: true,
+      group: 'basics',
+    },
+    {
+      name: 'title',
+      title: 'Product Name',
+      type: 'string',
+      validation: (Rule) => Rule.required(),
+      group: 'basics',
+    },
+    {
+      name: 'slug',
+      title: 'URL Slug',
+      type: 'slug',
+      options: { source: 'title', maxLength: 96 },
+      validation: (Rule) => Rule.required(),
+      group: 'basics',
+    },
+    {
+      name: 'collection',
+      title: 'Category / Collection',
+      type: 'reference',
+      to: [{ type: 'collection' }],
+      group: 'basics',
+    },
+
+    // --- PRICING & COD TAB ---
+    {
+      name: 'prepaidPrice',
+      title: 'Prepaid Price (₹)',
+      type: 'number',
+      validation: (Rule) => Rule.required(),
+      group: 'pricing',
+    },
+    {
+      name: 'isCodAvailable',
+      title: 'Is COD Available?',
+      type: 'boolean',
+      initialValue: true,
+      group: 'pricing',
+    },
+    {
+      name: 'codPrice',
+      title: 'COD Price (₹)',
+      type: 'number',
+      hidden: ({ document }) => !document?.isCodAvailable,
+      group: 'pricing',
+      description: 'Usually Prepaid Price + ₹49-₹99 for COD fee',
+    },
+    {
+      name: 'discountBadge',
+      title: 'Discount Badge Text (Optional)',
+      type: 'string',
+      group: 'pricing',
+      description: 'e.g., "20% OFF" or "Trending"',
+    },
+    {
+      name: 'deliveryEstimate',
+      title: 'Delivery Estimate',
+      type: 'string',
+      initialValue: '5-7 Days',
+      group: 'pricing',
+    },
+
+    // --- IMAGES & TEXT TAB ---
+    {
+      name: 'gallery',
+      title: 'Product Images (Minimum 3, First is Hero)',
+      type: 'array',
+      of: [{ type: 'image', options: { hotspot: true } }],
+      validation: (Rule) => Rule.required().min(1),
+      group: 'media',
+    },
+    {
+      name: 'tagline',
+      title: 'Short Hook / One-Liner',
+      type: 'string',
+      group: 'media',
+      description: 'e.g., "The desk lamp you didn\'t know you needed."',
+    },
+    {
+      name: 'highlights',
+      title: 'Bullet Highlights (Max 4)',
+      type: 'array',
+      of: [{ type: 'string' }],
+      validation: (Rule) => Rule.max(4),
+      group: 'media',
+    },
+  ],
+}
