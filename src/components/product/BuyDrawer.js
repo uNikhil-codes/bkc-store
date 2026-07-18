@@ -151,11 +151,11 @@ export default function BuyDrawer({ isOpen, onClose, product }) {
         return
       }
 
-      // Generate Order on Server
+      // SECURE: Send product slug instead of amount to prevent tampering
       const data = await fetch('/api/razorpay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: finalPrice }),
+        body: JSON.stringify({ slug: product.slug }),
       }).then((t) => t.json())
 
       if (!data.id) {

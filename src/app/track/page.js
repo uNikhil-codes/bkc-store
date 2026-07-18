@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react' // FIXED: Added useEffect here
 import { Search, Package, CheckCircle2, Truck, Clock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { supabase } from '@/lib/supabase'
 
 export default function TrackPage() {
   const [orderId, setOrderId] = useState('')
@@ -29,19 +30,42 @@ export default function TrackPage() {
     if (savedPhone) setPhone(savedPhone)
   }, [])
 
-  const handleTrack = (e) => {
+  // Replace your handleTrack function with this:
+  const handleTrack = async (e) => {
     e.preventDefault()
     setIsSearching(true)
+    setTrackingResult(null)
 
-    setTimeout(() => {
-      setIsSearching(false)
-      setTrackingResult({
-        id: orderId || 'BKC-984729',
-        status: 'shipped',
-        expectedDate: 'Oct 24 - Oct 26',
-        items: 'Magnetic Spider-Man Desk Lamp'
-      })
-    }, 1200)
+    // 1. Query Supabase for the exact order
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('order_id', orderId)
+      .eq('customer_phone', phone)
+      .single()
+
+    setIsSearching(false)
+
+    if (error || !data) {
+      alert("Order not found. Please check your Order ID and Phone Number.")
+      return
+    }
+
+    // 2. Map Supabase status to our visual timeline
+    // Supabase status can be: 'Order Received', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered'
+    let mappedStatus = 'processing'
+    const dbStatus = data.status.toLowerCase()
+
+    if (dbStatus.includes('shipped')) mappedStatus = 'shipped'
+    if (dbStatus.includes('out')) mappedStatus = 'out_for_delivery'
+    if (dbStatus.includes('delivered')) mappedStatus = 'delivered'
+
+    setTrackingResult({
+      id: data.order_id,
+      status: mappedStatus,
+      expectedDate: '5-7 Days from order date',
+      items: data.product_name
+    })
   }
 
   const timeline = [

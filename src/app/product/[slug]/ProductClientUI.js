@@ -4,7 +4,7 @@ import { Truck, ShieldCheck } from 'lucide-react'
 import { motion } from 'framer-motion'
 import BuyDrawer from '@/components/product/BuyDrawer'
 
-// Import the new Zoom features
+// Premium Zoom features
 import Zoom from 'react-medium-image-zoom'
 import 'react-medium-image-zoom/dist/styles.css'
 
@@ -31,18 +31,18 @@ export default function ProductClientUI({ product }) {
         {/* --- LEFT COLUMN: Images --- */}
         <div className="w-full md:w-[50%] flex flex-col gap-4">
 
-          {/* Mobile Gallery */}
+          {/* MOBILE GALLERY: Now with Strict Snapping */}
           <div className="md:hidden w-full aspect-square relative bg-[#F3F4F6] overflow-hidden">
             <div ref={scrollContainerRef} onScroll={handleScroll} className="flex h-full w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth">
               {hasImages && product.gallery.map((img, i) => (
-                <div key={i} className="h-full w-full shrink-0 snap-center flex items-center justify-center p-4">
+                <div key={i} className="h-full w-full shrink-0 snap-always snap-center flex items-center justify-center p-4">
                   <Zoom>
-                    {/* CHANGED: object-contain prevents cropping */}
                     <img src={img} alt={`View ${i + 1}`} className="max-h-full max-w-full object-contain drop-shadow-sm" />
                   </Zoom>
                 </div>
               ))}
             </div>
+
             {hasImages && product.gallery.length > 1 && (
               <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 items-center z-10 pointer-events-none">
                 {product.gallery.map((_, i) => (
@@ -52,11 +52,11 @@ export default function ProductClientUI({ product }) {
             )}
           </div>
 
-                    {/* Desktop Gallery */}
+          {/* DESKTOP GALLERY: Fixed Height & Width */}
           {hasImages && (
             <div className="hidden md:flex flex-col gap-3">
 
-              {/* FIXED: Strictly locked height and width to prevent overflow */}
+              {/* Locked height and width to prevent Zoom overflow */}
               <div className="w-full h-[450px] bg-[#F3F4F6] rounded-3xl border border-border flex items-center justify-center p-6 overflow-hidden">
                 <Zoom>
                   <img
