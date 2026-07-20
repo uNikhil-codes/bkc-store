@@ -3,34 +3,40 @@ import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import InstaBrowserWarning from "@/components/shared/InstaBrowserWarning";
+import SupportBubble from "@/components/shared/SupportBubble";
 
-const inter = Inter({ subsets: ["latin"] });
+/* One typeface, like Apple's single SF family — hierarchy through
+   weight, size, and tracking instead of switching fonts */
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata = {
-  title: "BigKidFinds | Premium Curated Finds",
-  description: "Curated aesthetic finds and impulse-worthy products.",
+  title: "BigKidFinds | Curated Finds, Clearly Delivered",
+  description:
+    "Thoughtfully curated products with transparent pricing, secure payments, and delivery across India.",
 };
 
 export const viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#f5f5f7",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-surface text-primary antialiased min-h-screen flex flex-col`}>
+    <html lang="en" className={inter.variable}>
+      <body className="min-h-screen bg-background font-sans text-primary antialiased flex flex-col">
         <InstaBrowserWarning />
         <Navbar />
-
-        {/* Changed max-w-md to max-w-7xl for full desktop support */}
-        <main className="flex-1 w-full max-w-7xl mx-auto relative">
+        <main className="relative flex-1 w-full max-w-7xl mx-auto">
           {children}
         </main>
-
         <Footer />
+        <SupportBubble />
       </body>
     </html>
   );

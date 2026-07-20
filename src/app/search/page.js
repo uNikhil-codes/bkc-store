@@ -4,10 +4,12 @@ import SearchClientUI from './SearchClientUI'
 
 export const revalidate = 10
 
-export default async function SearchPage() {
+export default async function SearchPage({ searchParams }) {
+  const params = (await searchParams) ?? {}
+  const initialQuery = typeof params.q === "string" ? params.q.slice(0, 80) : ""
+
   // Fetch ALL active products from your real Sanity database
   const rawProducts = await client.fetch(`*[_type == "product" && isActive == true] | order(_createdAt desc)`)
-
   const products = rawProducts.map(p => ({
     slug: p.slug?.current || '',
     title: p.title || 'Untitled',
@@ -19,5 +21,5 @@ export default async function SearchPage() {
   }))
 
   // Pass them to the client UI
-  return <SearchClientUI products={products} />
+  return <SearchClientUI products={products} initialQuery={initialQuery} />
 }

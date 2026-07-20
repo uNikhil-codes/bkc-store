@@ -1,47 +1,175 @@
-import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
+import Link from "next/link";
+import { ArrowLeft, CircleAlert, FileCheck2, ShieldCheck } from "lucide-react";
 
 export default function RefundPage() {
   return (
-    <div className="px-5 py-10 max-w-3xl mx-auto min-h-screen">
-      <Link href="/" className="inline-flex items-center gap-1 text-sm font-bold text-secondary hover:text-primary transition-colors mb-8">
-        <ChevronLeft size={18} /> Back to store
+    <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1 rounded-lg text-sm font-medium text-secondary transition-colors hover:text-primary"
+      >
+        <ArrowLeft size={16} strokeWidth={2} />
+        Back to store
       </Link>
 
-      <p className="text-xs font-bold uppercase tracking-widest text-secondary mb-2">Fair & Transparent</p>
-      <h1 className="text-3xl font-black tracking-tight mb-6">Refund & Issue Policy</h1>
+      <header className="mt-8">
+        <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#fff4e8] text-[#a85f00]">
+          <FileCheck2 size={23} strokeWidth={1.8} />
+        </div>
 
-      <p className="text-base font-medium text-secondary leading-relaxed mb-10">
-        We want every order to feel right. Our products are curated for quality, and we stand behind them. To protect both you, our valued customer, and our small business from fraud, we have a strict, clear, and transparent policy for handling issues.
-      </p>
+        <p className="mt-5 text-xs font-medium uppercase tracking-[0.12em] text-secondary">
+          Clear claims process
+        </p>
 
-      <div className="prose prose-sm md:prose-base prose-neutral max-w-none text-primary/90">
-        <h3 className="text-lg font-bold text-primary mt-8 mb-3">1. When Claims Are Accepted (Our Promise)</h3>
-        <p className="font-medium mb-3">We will provide a full refund or a free replacement under the following conditions only:</p>
-        <ul className="font-medium list-disc pl-5 mb-6 space-y-3">
-          <li><strong>Wrong Item Received:</strong> The product that arrived is not the product you ordered. <br/><span className="text-red-600 font-bold">BUT MANDATORY RECORDING OF UNBOXING OF FULL PRODUCT IS REQUIRED WITH SHOWING LABEL CLEARLY FIRST BEFORE OPENING.</span></li>
-          <li><strong>Item Unavailable Post-Payment:</strong> You prepaid for an item, but it became out of stock before we could dispatch it. In this rare case, we will proactively contact you and issue an instant full refund.</li>
-        </ul>
+        <h1 className="mt-2 text-[34px] font-semibold tracking-[-0.055em] text-primary sm:text-4xl">
+          Refund Policy
+        </h1>
 
-        <h3 className="text-lg font-bold text-primary mt-8 mb-3">2. The Unboxing Video (Your Responsibility & Protection)</h3>
-        <p className="font-medium mb-3">This is the most important part of our policy. No exceptions will be made.</p>
-        <ul className="font-medium list-disc pl-5 mb-6 space-y-3">
-          <li>The video must start before you open the outer package and clearly show the shipping label is intact while recording. <span className="text-red-600 font-bold">MANDATORY RECORDING OF UNBOXING OF FULL PRODUCT IS REQUIRED WITH SHOWING LABEL CLEARLY FIRST BEFORE OPENING.</span></li>
-          <li>The video must continue without any cuts or edits, showing you opening the package and revealing the product for the first time.</li>
-        </ul>
-        <p className="font-medium mb-6">This policy is in place to protect against fraudulent claims and allows us to quickly process legitimate issues with our fulfillment partners. Without a valid unboxing video, your claim will be rejected.</p>
+        <p className="mt-4 max-w-2xl text-sm leading-6 text-secondary sm:text-base">
+          We want every order to feel right. Our products are curated for
+          quality, and we stand behind them with a clear and transparent claims
+          process.
+        </p>
+      </header>
 
-        <h3 className="text-lg font-bold text-primary mt-8 mb-3">3. What Is Not Covered?</h3>
-        <p className="font-medium mb-3">We do not accept returns or refunds for the following reasons:</p>
-        <ul className="font-medium list-disc pl-5 mb-6 space-y-2">
-          <li>"Change of mind" or if you simply do not like the product. Please order thoughtfully.</li>
-          <li>Slight variations in color or texture. The products are shot under professional lighting, and slight differences can occur depending on your screen.</li>
-          <li>Claims submitted more than 48 hours after the delivery date recorded by the courier.</li>
-        </ul>
+      <section className="mt-8 overflow-hidden rounded-[22px] border border-border bg-[#f8f8fa]">
+        <div className="flex items-start gap-3 p-4">
+          <ShieldCheck
+            size={20}
+            strokeWidth={1.8}
+            className="mt-0.5 shrink-0 text-primary"
+          />
+          <div>
+            <p className="text-sm font-semibold text-primary">
+              Designed to protect legitimate claims
+            </p>
+            <p className="mt-1 text-xs leading-5 text-secondary">
+              An uninterrupted unboxing video is required for claims involving
+              a wrong or damaged item. This protects both customers and our
+              fulfilment partners.
+            </p>
+          </div>
+        </div>
+      </section>
 
-        <h3 className="text-lg font-bold text-primary mt-8 mb-3">4. How to Raise a Claim</h3>
-        <p className="font-medium mb-6">If your issue meets our criteria, please send a DM to our Instagram (@bkc.finds) or use our Contact page within 48 hours of delivery. Include your Order ID, and we will guide you on how to email us your unboxing video. Once verified, we resolve all claims within 5-7 business days.</p>
-      </div>
+      <article className="mt-10 space-y-9 text-[15px] leading-7 text-secondary">
+        <section>
+          <h2 className="text-lg font-semibold tracking-[-0.025em] text-primary">
+            1. When Claims Are Accepted
+          </h2>
+
+          <p className="mt-3">
+            We provide a full refund or a free replacement in the following
+            situations:
+          </p>
+
+          <ul className="mt-3 list-disc space-y-3 pl-5 marker:text-primary">
+            <li>
+              <strong className="font-semibold text-primary">
+                Wrong Item Received:
+              </strong>{" "}
+              The product delivered is not the product you ordered. A full,
+              uninterrupted unboxing video is mandatory. The shipping label
+              must be shown clearly before the package is opened.
+            </li>
+
+            <li>
+              <strong className="font-semibold text-primary">
+                Item Unavailable Post-Payment:
+              </strong>{" "}
+              You paid for an item that became unavailable before dispatch. In
+              this rare situation, we will contact you and issue a full refund.
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold tracking-[-0.025em] text-primary">
+            2. The Unboxing Video
+          </h2>
+
+          <p className="mt-3">
+            The unboxing recording is required for any eligible wrong-item or
+            damage-related claim. It must be complete and uninterrupted.
+          </p>
+
+          <div className="mt-4 rounded-[18px] border border-[#f3c5c0] bg-[#fff8f7] p-4">
+            <div className="flex items-start gap-3">
+              <CircleAlert
+                size={19}
+                strokeWidth={1.8}
+                className="mt-0.5 shrink-0 text-[#b42318]"
+              />
+
+              <p className="text-sm leading-6 text-[#7a271a]">
+                The recording must begin before the outer package is opened and
+                clearly show the shipping label first. Without a valid unboxing
+                video, the claim cannot be accepted.
+              </p>
+            </div>
+          </div>
+
+          <ul className="mt-4 list-disc space-y-2 pl-5 marker:text-primary">
+            <li>
+              The video must start before opening the outer package and clearly
+              show that the shipping label and package are intact.
+            </li>
+            <li>
+              The recording must continue without cuts or edits while opening
+              the package and revealing the product for the first time.
+            </li>
+          </ul>
+
+          <p className="mt-4">
+            This policy helps prevent fraudulent claims and allows us to
+            resolve legitimate issues faster with our fulfilment partners.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold tracking-[-0.025em] text-primary">
+            3. What Is Not Covered?
+          </h2>
+
+          <p className="mt-3">
+            We do not accept returns or refunds for the following reasons:
+          </p>
+
+          <ul className="mt-3 list-disc space-y-2 pl-5 marker:text-primary">
+            <li>
+              Change of mind, or if you simply do not like the product. Please
+              order thoughtfully.
+            </li>
+            <li>
+              Slight variations in colour or texture. Products are photographed
+              under professional lighting, and small differences may occur
+              depending on your screen.
+            </li>
+            <li>
+              Claims submitted more than 48 hours after the courier-recorded
+              delivery date.
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold tracking-[-0.025em] text-primary">
+            4. How to Raise a Claim
+          </h2>
+
+          <p className="mt-3">
+            If your issue meets the conditions above, send a DM to our
+            Instagram account, <strong className="font-semibold text-primary">@bkc.finds</strong>,
+            {" "}or use our Contact page within 48 hours of delivery. Include your
+            Order ID and we will guide you on how to send the unboxing video.
+          </p>
+
+          <p className="mt-4">
+            Once your claim is verified, we resolve eligible cases within 5–7
+            business days.
+          </p>
+        </section>
+      </article>
     </div>
-  )
+  );
 }

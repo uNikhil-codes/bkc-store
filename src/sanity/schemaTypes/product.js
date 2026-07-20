@@ -38,7 +38,6 @@ export default {
       to: [{ type: 'collection' }],
       group: 'basics',
     },
-
     // --- PRICING & COD TAB ---
     {
       name: 'prepaidPrice',
@@ -60,7 +59,7 @@ export default {
       type: 'number',
       hidden: ({ document }) => !document?.isCodAvailable,
       group: 'pricing',
-      description: 'Usually Prepaid Price + ₹49-₹99 for COD fee',
+      description: 'Usually Prepaid Price + ₹49–₹99 for COD fee',
     },
     {
       name: 'discountBadge',
@@ -76,7 +75,6 @@ export default {
       initialValue: '5-7 Days',
       group: 'pricing',
     },
-
     // --- IMAGES & TEXT TAB ---
     {
       name: 'gallery',

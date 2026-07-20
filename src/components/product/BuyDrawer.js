@@ -1,129 +1,232 @@
-"use client"
-import { motion, AnimatePresence } from 'framer-motion'
-import { X, ShieldCheck, CreditCard, Landmark, ArrowRight, Loader2, ChevronLeft } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { sendOrderAlert } from '@/actions/telegram'
+"use client";
 
-// Helper to load Razorpay script
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  CreditCard,
+  Landmark,
+  Loader2,
+  MapPin,
+  PackageCheck,
+  ShieldCheck,
+  X
+} from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { sendOrderAlert } from "@/actions/telegram";
+
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
-    const script = document.createElement("script")
-    script.src = "https://checkout.razorpay.com/v1/checkout.js"
-    script.onload = () => resolve(true)
-    script.onerror = () => resolve(false)
-    document.body.appendChild(script)
-  })
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const existingScript = document.querySelector(
+      'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+    );
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(true), { once: true });
+      existingScript.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
+function formatPrice(value) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value || 0);
 }
 
-function FormField({ label, id, type = "text", value, onChange, placeholder, readOnly = false, optional = false }) {
+function FormField({
+  label,
+  id,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  readOnly = false,
+  optional = false,
+  autoComplete,
+  inputMode,
+}) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-xs font-bold uppercase tracking-wider text-secondary">
-        {label}{optional && <span className="font-normal normal-case tracking-normal text-secondary/40 ml-1">(Optional)</span>}
+    <div className="space-y-1">
+      <label htmlFor={id} className="block text-xs font-semibold text-secondary">
+        {label}
+        {optional && <span className="ml-1 font-normal text-secondary/60">(Optional)</span>}
       </label>
-      <input id={id} type={type} value={value} onChange={onChange} placeholder={placeholder} readOnly={readOnly} className={`w-full rounded-xl border border-border px-4 py-3 text-sm font-medium outline-none transition-all ${readOnly ? 'bg-[#F3F4F6] text-secondary cursor-not-allowed' : 'bg-surface text-primary focus:border-primary focus:ring-2 focus:ring-primary/10'}`} />
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        readOnly={readOnly}
+        autoComplete={autoComplete}
+        inputMode={inputMode}
+        className={`field h-11 w-full rounded-xl px-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+          readOnly ? "cursor-not-allowed bg-[#f5f5f7] text-secondary" : "bg-surface"
+        }`}
+      />
     </div>
-  )
+  );
+}
+
+function StepIndicator({ currentStep }) {
+  const steps = ["Payment", "Address", "Verify"];
+  return (
+    <div className="flex items-center justify-center gap-3 py-2" aria-label={`Step ${currentStep} of 3`}>
+      {steps.map((step, index) => {
+        const stepNumber = index + 1;
+        const isComplete = stepNumber < currentStep;
+        const isCurrent = stepNumber === currentStep;
+        return (
+          <div key={step} className="flex items-center gap-2">
+            <div
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold transition-all duration-200 ${
+                isComplete || isCurrent
+                  ? "bg-primary text-white"
+                  : "bg-[#e8e8ed] text-secondary"
+              }`}
+            >
+              {isComplete ? <Check size={10} strokeWidth={3} /> : stepNumber}
+            </div>
+            {index < steps.length - 1 && (
+              <div
+                className={`h-px w-6 transition-colors duration-200 ${
+                  stepNumber < currentStep ? "bg-primary" : "bg-[#e8e8ed]"
+                }`}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function BuyDrawer({ isOpen, onClose, product }) {
-  const router = useRouter()
-  const [step, setStep] = useState(1)
-  const [paymentMode, setPaymentMode] = useState('prepaid')
+  const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [paymentMode, setPaymentMode] = useState("prepaid");
+  const [phone, setPhone] = useState("");
+  const [name, setName] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [house, setHouse] = useState("");
+  const [area, setArea] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [isLoadingPin, setIsLoadingPin] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pinError, setPinError] = useState("");
+  const [formError, setFormError] = useState("");
 
-  const [phone, setPhone] = useState('')
-  const [name, setName] = useState('')
-  const [pincode, setPincode] = useState('')
-  const [city, setCity] = useState('')
-  const [state, setState] = useState('')
-  const [house, setHouse] = useState('')
-  const [area, setArea] = useState('')
-  const [landmark, setLandmark] = useState('')
+  const slideSpring = { type: "spring", damping: 32, stiffness: 340 };
+  const codFee = Math.max(0, (product.codPrice || 0) - (product.prepaidPrice || 0));
+  const finalPrice = paymentMode === "prepaid" ? product.prepaidPrice : product.codPrice;
 
-  const [isLoadingPin, setIsLoadingPin] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [pinError, setPinError] = useState('')
-  const [formError, setFormError] = useState('')
+  useEffect(() => {
+    setFormError("");
+  }, [step]);
 
-  const slideSpring = { type: "spring", damping: 30, stiffness: 350 }
-
-  useEffect(() => { setFormError('') }, [step])
-
-  const handlePincodeChange = async (e) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6)
-    setPincode(value)
-    setPinError('')
-    if (value.length === 6) {
-      setIsLoadingPin(true)
-      try {
-        const res = await fetch(`https://api.postalpincode.in/pincode/${value}`)
-        const data = await res.json()
-        if (data && data[0]?.Status === "Success") {
-          const po = data[0].PostOffice[0]
-          setCity(po.District || po.Block || '')
-          setState(po.State || '')
-        } else {
-          setPinError('Could not find pincode. Please enter City/State manually.')
-        }
-      } catch (err) {
-        setPinError('Network error. Please enter City/State manually.')
-      } finally {
-        setIsLoadingPin(false)
-      }
+  useEffect(() => {
+    if (!isOpen) {
+      setFormError("");
+      setPinError("");
+      setStep(1);
     }
-  }
+  }, [isOpen]);
 
-  const validateStep2 = () => {
-    if (!phone || phone.length < 10) return "Valid 10-digit phone required."
-    if (!name) return "Full name is required."
-    if (!pincode || pincode.length < 6) return "Valid 6-digit Pincode required."
-    if (!city || !state) return "City and State required."
-    if (!house) return "House/Flat number required."
-    if (!area) return "Street/Area required."
-    return ""
-  }
+  const handleClose = () => {
+    if (isSubmitting) return;
+    onClose();
+  };
+
+  const handlePincodeChange = async (event) => {
+    const value = event.target.value.replace(/\D/g, "").slice(0, 6);
+    setPincode(value);
+    setPinError("");
+    if (value.length !== 6) return;
+    setIsLoadingPin(true);
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${value}`);
+      const data = await response.json();
+      if (data?.[0]?.Status === "Success" && data?.[0]?.PostOffice?.[0]) {
+        const postOffice = data[0].PostOffice[0];
+        setCity(postOffice.District || postOffice.Block || "");
+        setState(postOffice.State || "");
+      } else {
+        setPinError("Invalid PIN code. Please check and enter city/state manually.");
+      }
+    } catch {
+      setPinError("Postal lookup unavailable. Please fill city and state.");
+    } finally {
+      setIsLoadingPin(false);
+    }
+  };
+
+  const validateAddress = () => {
+    if (!phone || phone.length !== 10) return "Please enter a valid 10-digit phone number.";
+    if (!name.trim()) return "Full name is required.";
+    if (!pincode || pincode.length !== 6) return "6-digit PIN code is required.";
+    if (!city.trim() || !state.trim()) return "City and State are required.";
+    if (!house.trim()) return "Flat/building number is required.";
+    if (!area.trim()) return "Street/area details are required.";
+    return "";
+  };
 
   const handleNextStep = () => {
-    if (step === 1) setStep(2)
-    else if (step === 2) {
-      const error = validateStep2()
-      if (error) setFormError(error)
-      else setStep(3)
+    setFormError("");
+    if (step === 1) {
+      setStep(2);
+      return;
     }
-  }
+    if (step === 2) {
+      const error = validateAddress();
+      if (error) {
+        setFormError(error);
+        return;
+      }
+      setStep(3);
+    }
+  };
 
-  // Finalizer function runs AFTER successful payment or immediately for COD
   const finalizeOrder = async (orderData) => {
-    const { error } = await supabase.from('orders').insert([orderData])
+    const { error } = await supabase.from("orders").insert([orderData]);
     if (error) {
-      setFormError("Database error. If money was deducted, please contact support.")
-      setIsSubmitting(false)
-      return
+      setFormError("Could not save your order. If debited, contact our support team.");
+      setIsSubmitting(false);
+      return;
     }
-
-    await sendOrderAlert(orderData)
-
-    localStorage.setItem('bkc_recent_order', orderData.order_id)
-    localStorage.setItem('bkc_recent_phone', orderData.customer_phone)
-
-    onClose()
+    await sendOrderAlert(orderData);
+    localStorage.setItem("bkc_recent_order", orderData.order_id);
+    localStorage.setItem("bkc_recent_phone", orderData.customer_phone);
+    onClose();
     setTimeout(() => {
-      router.push('/success')
-      setIsSubmitting(false)
-      setStep(1)
-      setPaymentMode('prepaid')
-    }, 300)
-  }
+      setIsSubmitting(false);
+      setStep(1);
+      setPaymentMode("prepaid");
+      router.push("/success");
+    }, 250);
+  };
 
   const handleOrderSubmit = async () => {
-    setIsSubmitting(true)
-    setFormError('')
-
-    const generatedOrderId = 'BKC-' + Math.floor(100000 + Math.random() * 900000)
-    const finalPrice = paymentMode === 'prepaid' ? product.prepaidPrice : product.codPrice
-    const fullAddress = `${house}, ${area}${landmark ? `, Near ${landmark}` : ''}`
+    setIsSubmitting(true);
+    setFormError("");
+    const generatedOrderId = "BKC-" + Math.floor(100000 + Math.random() * 900000);
+    const fullAddress = `${house}, ${area}${landmark ? `, Near ${landmark}` : ""}`;
 
     const orderData = {
       order_id: generatedOrderId,
@@ -133,178 +236,402 @@ export default function BuyDrawer({ isOpen, onClose, product }) {
       customer_name: name,
       customer_phone: phone,
       delivery_address: fullAddress,
-      city: city,
-      state: state,
-      pincode: pincode,
-      status: 'Order Received'
+      city,
+      state,
+      pincode,
+      status: "Order Received",
+    };
+
+    if (paymentMode === "cod") {
+      await finalizeOrder(orderData);
+      return;
     }
 
-    if (paymentMode === 'cod') {
-      // Direct to finalize for COD
-      await finalizeOrder(orderData)
-    } else {
-      // RAZORPAY FLOW
-      const res = await loadRazorpayScript()
-      if (!res) {
-        setFormError("Failed to load payment gateway. Check your connection.")
-        setIsSubmitting(false)
-        return
-      }
+    const razorpayLoaded = await loadRazorpayScript();
+    if (!razorpayLoaded) {
+      setFormError("The payment gateway could not load. Please check your connection.");
+      setIsSubmitting(false);
+      return;
+    }
 
-      // SECURE: Send product slug instead of amount to prevent tampering
-      const data = await fetch('/api/razorpay', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+    try {
+      const response = await fetch("/api/razorpay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug: product.slug }),
-      }).then((t) => t.json())
+      });
+      const data = await response.json();
 
-      if (!data.id) {
-        setFormError("Server error. Please try again.")
-        setIsSubmitting(false)
-        return
+      if (!response.ok || !data.id) {
+        setFormError("Could not initiate payment. Please try again.");
+        setIsSubmitting(false);
+        return;
       }
 
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: data.amount,
-        currency: data.currency,
-        name: "BigKidFinds",
-        description: product.title,
-        order_id: data.id,
-        prefill: { name: name, contact: phone },
-        theme: { color: "#111827" },
-        handler: async function (response) {
-          // Success! Mark as Paid and finalize
-          orderData.status = `Paid - ${response.razorpay_payment_id}`
-          await finalizeOrder(orderData)
-        },
-      }
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount: data.amount,
+      currency: data.currency,
+      name: "BKC Store",
+      description: product.title,
+      order_id: data.id,
+      prefill: { name, contact: phone },
+      theme: { color: "#1d1d1f" },
+      // OFFICIAL RAZORPAY DISMISSAL METHOD
+      modal: {
+        ondismiss: function () {
+          setIsSubmitting(false);
+        }
+      },
+      handler: async function (paymentResponse) {
+        orderData.status = `Paid - Razorpay Ref: ${paymentResponse.razorpay_payment_id}`;
+        await finalizeOrder(orderData);
+      },
+    };
 
-      const paymentObject = new window.Razorpay(options)
-      paymentObject.on('payment.failed', function (response) {
-        setFormError("Payment failed or cancelled.")
-        setIsSubmitting(false)
-      })
+    const paymentObject = new window.Razorpay(options);
+    paymentObject.on("payment.failed", () => {
+      setFormError(
+        "Your payment was not completed. No order has been placed — please try again."
+      );
+      setIsSubmitting(false);
+    });
 
-      // If user closes window without paying
-      paymentObject.on('modal.closed', function() {
-         setIsSubmitting(false)
-      })
-
-      paymentObject.open()
-    }
+    // Hallucinated modal event listener removed entirely to prevent runtime issues
+    paymentObject.open();
+  } catch {
+    setFormError("Something went wrong while starting payment. Please try again.");
+    setIsSubmitting(false);
   }
+};
 
-  const codFee = product.codPrice - product.prepaidPrice
-  const finalPrice = paymentMode === 'prepaid' ? product.prepaidPrice : product.codPrice
+  const heading = step === 1 ? "Payment Method" : step === 2 ? "Delivery Address" : "Review Order";
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 z-[60] bg-primary/40 backdrop-blur-sm" />
-          <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={slideSpring} className="fixed bottom-0 left-0 right-0 z-[70] mx-auto w-full max-w-md overflow-hidden rounded-t-[2.5rem] bg-surface shadow-2xl flex flex-col max-h-[90vh] pb-safe">
+          {/* Overlay */}
+          <motion.button
+            type="button"
+            aria-label="Close checkout"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleClose}
+            className="fixed inset-0 z-[60] bg-black/45 backdrop-blur-[1px]"
+          />
 
-            <div className="flex items-center justify-between border-b border-border p-5 shrink-0">
-              <button onClick={step === 1 ? onClose : () => setStep(step - 1)} className="flex items-center gap-1 text-secondary hover:text-primary transition-colors">
-                <ChevronLeft size={18} strokeWidth={2.5} />
-                <span className="text-sm font-medium">{step === 1 ? 'Close' : 'Back'}</span>
-              </button>
-              <div className="text-center">
-                <span className="text-[10px] font-bold text-secondary uppercase tracking-widest">Step {step} of 3</span>
-                <h3 className="font-bold tracking-tight text-base text-primary">{step === 1 ? 'Payment' : step === 2 ? 'Address' : 'Review'}</h3>
+          {/* Sheet */}
+          <motion.section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="checkout-title"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={slideSpring}
+            className="fixed bottom-0 left-0 right-0 z-[70] mx-auto flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[28px] bg-background shadow-[0_-12px_48px_rgba(0,0,0,0.15)]"
+          >
+            {/* Header */}
+            <div className="shrink-0 border-b border-border/60 bg-surface px-5 py-4">
+              <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-[#c7c7cc]" />
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={step === 1 ? handleClose : () => setStep(step - 1)}
+                  disabled={isSubmitting}
+                  className="flex items-center gap-1 text-sm font-semibold text-secondary hover:text-primary transition-colors disabled:opacity-40"
+                >
+                  <ChevronLeft size={16} />
+                  {step === 1 ? "Cancel" : "Back"}
+                </button>
+                <div className="text-center">
+                  <span id="checkout-title" className="block text-sm font-semibold text-primary">{heading}</span>
+                  <span className="text-[10px] text-secondary">Step {step} of 3</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  disabled={isSubmitting}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-[#f1f2f4] text-secondary hover:bg-[#e5e5ea] transition-colors"
+                >
+                  <X size={15} />
+                </button>
               </div>
-              <button onClick={onClose} className="rounded-full bg-background p-2 text-primary hover:bg-border transition-colors">
-                <X size={18} strokeWidth={2.5} />
-              </button>
+              <div className="mt-3">
+                <StepIndicator currentStep={step} />
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 hide-scrollbar">
-              {step === 1 && (
-                <div className="flex flex-col gap-4">
-                  <label className={`relative flex cursor-pointer flex-col gap-1 rounded-2xl border-2 p-4 transition-all ${paymentMode === 'prepaid' ? 'border-primary bg-primary/5' : 'border-border bg-surface'}`}>
-                    <input type="radio" name="payment" value="prepaid" checked={paymentMode === 'prepaid'} onChange={() => setPaymentMode('prepaid')} className="sr-only" />
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-primary flex items-center gap-2"><CreditCard size={18} /> Pay Online</span>
-                      <span className="text-lg font-black text-primary">₹{product.prepaidPrice}</span>
-                    </div>
-                    <p className="text-xs text-secondary mt-1">UPI, Cards, NetBanking. Dispatched instantly.</p>
-                    <div className="absolute -top-3 right-4 bg-primary text-surface text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">Save ₹{codFee}</div>
-                  </label>
+            {/* Scrollable Body */}
+            <div className="hide-scrollbar flex-1 overflow-y-auto px-5 py-6">
+              <div className="mx-auto max-w-md">
 
-                  {product.isCodAvailable && (
-                    <label className={`flex cursor-pointer flex-col gap-1 rounded-2xl border-2 p-4 transition-all ${paymentMode === 'cod' ? 'border-primary bg-primary/5' : 'border-border bg-surface opacity-80'}`}>
-                      <input type="radio" name="payment" value="cod" checked={paymentMode === 'cod'} onChange={() => setPaymentMode('cod')} className="sr-only" />
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-primary flex items-center gap-2"><Landmark size={18} /> Cash on Delivery</span>
-                        <span className="text-lg font-bold text-primary">₹{product.codPrice}</span>
-                      </div>
-                      <p className="text-xs text-secondary mt-1">Pay with cash when package arrives.</p>
-                      <div className="mt-2 text-[10px] font-medium text-secondary bg-background border border-border p-2.5 rounded-xl flex gap-2">
-                        <ShieldCheck size={14} className="shrink-0 text-primary" /> Includes ₹{codFee} extra COD convenience fee.
+                {/* Step 1: Payment Selection */}
+                {step === 1 && (
+                  <div className="space-y-4">
+                    {/* Prepaid selection card */}
+                    <label
+                      className={`relative block cursor-pointer rounded-2xl border p-4 transition-all ${
+                        paymentMode === "prepaid"
+                          ? "border-primary bg-primary/[0.02] ring-1 ring-primary"
+                          : "border-border bg-surface hover:border-secondary"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="payment"
+                        value="prepaid"
+                        checked={paymentMode === "prepaid"}
+                        onChange={() => setPaymentMode("prepaid")}
+                        className="sr-only"
+                      />
+                      <div className="flex gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white">
+                          <CreditCard size={18} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold text-primary">Pay Online (Secure)</p>
+                            <p className="text-sm font-semibold text-primary">{formatPrice(product.prepaidPrice)}</p>
+                          </div>
+                          <p className="mt-1 text-xs text-secondary">
+                            UPI, Google Pay, Cards, Netbanking via Razorpay.
+                          </p>
+                          {codFee > 0 && (
+                            <span className="mt-2 inline-flex items-center rounded bg-[#e8f5ed] px-2 py-0.5 text-[10px] font-semibold text-[#147a3d]">
+                              Save {formatPrice(codFee)} vs COD
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </label>
-                  )}
-                </div>
-              )}
 
-              {step === 2 && (
-                <div className="flex flex-col gap-4">
-                  <FormField label="Phone Number" id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile number" />
-                  <FormField label="Full Name" id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your first and last name" />
-                  <div className="grid grid-cols-2 gap-3 relative">
-                    <FormField label="Pincode" id="pincode" type="tel" value={pincode} onChange={handlePincodeChange} placeholder="6-digit Pincode" />
-                    {isLoadingPin && <Loader2 size={16} className="animate-spin absolute left-1/2 -ml-6 top-10 text-secondary" />}
-                    <FormField label="City / District" id="city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" />
-                  </div>
-                  {pinError && <span className="text-xs font-bold text-red-500">{pinError}</span>}
-                  <FormField label="State" id="state" value={state} onChange={(e) => setState(e.target.value)} placeholder="State" />
-                  <FormField label="House / Flat No, Building" id="house" value={house} onChange={(e) => setHouse(e.target.value)} placeholder="e.g., Flat 402, Royal Enclave" />
-                  <FormField label="Street / Area / Locality" id="area" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g., MG Road" />
-                  <FormField label="Landmark" id="landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="e.g., Opp. Metro" optional />
-                </div>
-              )}
-
-              {step === 3 && (
-                <div className="flex flex-col gap-4">
-                  <div className="rounded-2xl border border-border p-4 bg-background flex flex-col gap-2">
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-secondary">Ship To</h5>
-                    <p className="text-sm font-bold">{name}</p>
-                    <p className="text-xs text-secondary leading-relaxed font-medium">{house}, {area}, {landmark && `${landmark},`} {city}, {state} - {pincode}</p>
-                    <p className="text-xs font-semibold text-secondary mt-1">Contact: {phone}</p>
-                  </div>
-                  <div className="flex flex-col gap-2 p-1">
-                    <div className="flex justify-between text-sm font-medium text-secondary"><span>Items</span><span>₹{product.prepaidPrice}</span></div>
-                    <div className="flex justify-between text-sm font-medium text-secondary"><span>Shipping Fee</span><span className="text-emerald-600 font-bold">FREE</span></div>
-                    {paymentMode === 'cod' && (
-                      <div className="flex justify-between text-sm font-medium text-secondary"><span>COD Fee</span><span>₹{codFee}</span></div>
+                    {/* COD selection card */}
+                    {product.isCodAvailable && (
+                      <label
+                        className={`relative block cursor-pointer rounded-2xl border p-4 transition-all ${
+                          paymentMode === "cod"
+                            ? "border-primary bg-primary/[0.02] ring-1 ring-primary"
+                            : "border-border bg-surface hover:border-secondary"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="payment"
+                          value="cod"
+                          checked={paymentMode === "cod"}
+                          onChange={() => setPaymentMode("cod")}
+                          className="sr-only"
+                        />
+                        <div className="flex gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f1f2f4] text-primary">
+                            <Landmark size={18} />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-semibold text-primary">Cash on Delivery (COD)</p>
+                              <p className="text-sm font-semibold text-primary">{formatPrice(product.codPrice)}</p>
+                            </div>
+                            <p className="mt-1 text-xs text-secondary">Pay at doorstep with cash or UPI on delivery.</p>
+                            {codFee > 0 && (
+                              <p className="mt-1.5 text-[10px] text-secondary">
+                                Includes a {formatPrice(codFee)} courier handling surcharge.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </label>
                     )}
-                    <hr className="border-border my-1" />
-                    <div className="flex justify-between text-base font-black text-primary"><span>Total Amount</span><span>₹{finalPrice}</span></div>
-                  </div>
-                  <p className="text-[11px] leading-relaxed text-secondary/70 bg-[#F3F4F6] p-3 rounded-xl">
-                    By clicking below you agree to our Terms and authorize BigKidFinds to fulfill this delivery via our verified partners.
-                  </p>
-                </div>
-              )}
 
-              {formError && <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-500">{formError}</div>}
+                    <div className="flex gap-2.5 rounded-xl bg-[#f5f5f7] p-4 text-xs text-secondary mt-6">
+                      <ShieldCheck size={16} className="mt-0.5 shrink-0 text-primary" />
+                      <p>
+                        Your payment is fully secured. We do not store financial details.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Address Details */}
+                {step === 2 && (
+                  <div className="space-y-4">
+                    <FormField
+                      label="Mobile number"
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      placeholder="10-digit mobile number"
+                      autoComplete="tel"
+                      inputMode="numeric"
+                    />
+                    <FormField
+                      label="Full name"
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Recipient's first and last name"
+                      autoComplete="name"
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="relative">
+                        <FormField
+                          label="PIN code"
+                          id="pincode"
+                          type="tel"
+                          value={pincode}
+                          onChange={handlePincodeChange}
+                          placeholder="6-digit PIN"
+                          autoComplete="postal-code"
+                          inputMode="numeric"
+                        />
+                        {isLoadingPin && (
+                          <Loader2 size={16} className="absolute right-3 top-8 animate-spin text-secondary" />
+                        )}
+                      </div>
+                      <FormField
+                        label="City"
+                        id="city"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="City"
+                        autoComplete="address-level2"
+                      />
+                    </div>
+                    {pinError && (
+                      <p className="rounded-xl bg-[#fff2f0] px-3 py-2 text-xs font-medium text-[#b42318]">
+                        {pinError}
+                      </p>
+                    )}
+                    <FormField
+                      label="State"
+                      id="state"
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      placeholder="State"
+                      autoComplete="address-level1"
+                    />
+                    <FormField
+                      label="Flat, House No., Building"
+                      id="house"
+                      value={house}
+                      onChange={(e) => setHouse(e.target.value)}
+                      placeholder="House / flat / building name"
+                      autoComplete="address-line1"
+                    />
+                    <FormField
+                      label="Street, Area, Locality"
+                      id="area"
+                      value={area}
+                      onChange={(e) => setArea(e.target.value)}
+                      placeholder="Street / area / locality"
+                      autoComplete="address-line2"
+                    />
+                    <FormField
+                      label="Nearby landmark"
+                      id="landmark"
+                      value={landmark}
+                      onChange={(e) => setLandmark(e.target.value)}
+                      placeholder="E.g., Opposite Metro Station"
+                      optional
+                    />
+                  </div>
+                )}
+
+                {/* Step 3: Review Order Summary */}
+                {step === 3 && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-border bg-surface p-4">
+                      <p className="text-xs font-semibold text-secondary uppercase">Deliver To</p>
+                      <p className="mt-2 text-sm font-semibold text-primary">{name}</p>
+                      <p className="mt-1 text-xs text-secondary leading-5">
+                        {house}, {area}
+                        {landmark ? `, Near ${landmark}` : ""}
+                        <br />
+                        {city}, {state} — {pincode}
+                      </p>
+                      <p className="mt-2 text-xs font-medium text-secondary">{phone}</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-border bg-surface p-4">
+                      <p className="text-xs font-semibold text-secondary uppercase">Item Details</p>
+                      <div className="mt-3 flex justify-between gap-4 text-sm font-semibold text-primary">
+                        <span>{product.title}</span>
+                        <span>{formatPrice(finalPrice)}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-secondary">
+                        Payment: {paymentMode === "prepaid" ? "Online Prepayment" : "Cash on Delivery (COD)"}
+                      </p>
+
+                      <div className="mt-4 space-y-2 border-t border-border pt-4 text-xs text-secondary">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span>{formatPrice(product.prepaidPrice)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Delivery</span>
+                          <span className="text-[#147a3d] font-medium">Free</span>
+                        </div>
+                        {paymentMode === "cod" && codFee > 0 && (
+                          <div className="flex justify-between">
+                            <span>COD handling fee</span>
+                            <span>{formatPrice(codFee)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between border-t border-border pt-3 text-sm font-semibold text-primary">
+                          <span>Order Total</span>
+                          <span>{formatPrice(finalPrice)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {formError && (
+                  <div className="mt-4 rounded-xl bg-[#fff2f0] px-3.5 py-3 text-xs font-medium leading-5 text-[#b42318]">
+                    {formError}
+                  </div>
+                )}
+
+              </div>
             </div>
 
-            <div className="shrink-0 border-t border-border p-5 bg-surface pb-safe">
+            {/* Bottom Sticky Action Button */}
+            <div className="shrink-0 border-t border-border bg-surface px-5 py-4 pb-safe">
               {step < 3 ? (
-                <motion.button whileTap={{ scale: 0.97 }} onClick={handleNextStep} className="w-full rounded-2xl bg-primary h-14 flex items-center justify-center text-sm font-bold text-surface transition-transform gap-2">
-                  Continue <ArrowRight size={16} />
+                <motion.button
+                  whileTap={{ scale: 0.985 }}
+                  onClick={handleNextStep}
+                  className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-white shadow-sm"
+                >
+                  <span>Continue</span>
+                  <ArrowRight size={16} />
                 </motion.button>
               ) : (
-                <motion.button disabled={isSubmitting} whileTap={!isSubmitting ? { scale: 0.97 } : {}} onClick={handleOrderSubmit} className="w-full rounded-2xl bg-primary h-14 flex items-center justify-center text-sm font-bold text-surface transition-transform disabled:opacity-80 disabled:cursor-not-allowed">
-                  {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : (paymentMode === 'prepaid' ? `Pay Online • ₹${finalPrice}` : `Place COD Order • ₹${finalPrice}`)}
+                <motion.button
+                  whileTap={{ scale: 0.985 }}
+                  disabled={isSubmitting}
+                  onClick={handleOrderSubmit}
+                  className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-white shadow-sm disabled:opacity-40"
+                >
+                  {isSubmitting ? (
+                    <Loader2 size={18} className="animate-spin text-white" />
+                  ) : paymentMode === "prepaid" ? (
+                    <span>Pay Securely & Place Order</span>
+                  ) : (
+                    <span>Place Order (COD)</span>
+                  )}
                 </motion.button>
               )}
+              <p className="mt-2 text-center text-[10px] text-secondary">
+                Secure SSL Encrypted Checkout • Hassle-Free Curation
+              </p>
             </div>
-          </motion.div>
+          </motion.section>
         </>
       )}
     </AnimatePresence>
-  )
+  );
 }
